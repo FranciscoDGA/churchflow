@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
+import { createClient } from '@/lib/supabase/client'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -19,12 +20,18 @@ export default function LoginPage() {
     e.preventDefault()
     setLoading(true)
     try {
-      // TODO: integrate with Supabase auth
-      await new Promise((r) => setTimeout(r, 1000))
+      const supabase = createClient()
+      const { error } = await supabase.auth.signInWithPassword({
+        email: form.email,
+        password: form.password,
+      })
+      if (error) throw error
       toast.success('Login realizado com sucesso!')
       router.push('/app')
-    } catch {
-      toast.error('Email ou senha inválidos.')
+      router.refresh()
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Email ou senha inválidos.'
+      toast.error(msg)
     } finally {
       setLoading(false)
     }

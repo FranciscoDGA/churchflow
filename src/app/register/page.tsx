@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { toast } from 'sonner'
+import { createClient } from '@/lib/supabase/client'
 
 const steps = ['Sua conta', 'Sua igreja', 'Plano']
 
@@ -32,12 +33,36 @@ export default function RegisterPage() {
     if (step < 2) { setStep(step + 1); return }
     setLoading(true)
     try {
-      // TODO: integrate with Supabase auth + org creation
-      await new Promise((r) => setTimeout(r, 1500))
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: form.email,
+          password: form.password,
+          name: form.name,
+          churchName: form.churchName,
+          city: form.city,
+          state: form.state,
+          pastor: form.pastor,
+          plan: form.plan,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Erro ao criar conta.')
+
+      const supabase = createClient()
+      const { error: loginError } = await supabase.auth.signInWithPassword({
+        email: form.email,
+        password: form.password,
+      })
+      if (loginError) throw loginError
+
       toast.success('Igreja registrada com sucesso! Bem-vindo ao ChurchFlow.')
       router.push('/app')
-    } catch {
-      toast.error('Erro ao criar conta. Tente novamente.')
+      router.refresh()
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Erro ao criar conta. Tente novamente.'
+      toast.error(msg)
     } finally {
       setLoading(false)
     }
